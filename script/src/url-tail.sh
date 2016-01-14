@@ -7,10 +7,13 @@ fi
 
 url=$1
 
+read -s -p "Enter Password for user 'logs': " password
+echo ""
+
 tail_off=0
 if [ $# -eq 2 ]; then
 	case $2 in
-    	''|*[!0-9]*)
+			''|*[!0-9]*)
 			echo "Tail offset must be a positive number"
 			exit 1
 			;;
@@ -22,7 +25,7 @@ fi
 
 function check_ranges_support() {
 	url=$1
-	ret=`curl -s -I -X HEAD $url | grep "Accept-Ranges: bytes"`
+	ret=`curl -u logs:$password -s -I -X HEAD $url | grep "Accept-Ranges: bytes"`
 
 	if [ -z "$ret" ]; then
 		echo
@@ -34,7 +37,7 @@ function check_ranges_support() {
 function get_length() {
 
 	url=$1
-	ret=`curl -s -I -X HEAD $url | awk '/Content-Length:/ {print $2}'`
+	ret=`curl -u logs:$password -s -I -X HEAD $url | awk '/Content-Length:/ {print $2}'`
 	echo $ret | sed 's/[^0-9]*//g'
 }
 
@@ -44,7 +47,7 @@ function print_tail() {
 	off=$2
 	len=$3
 
-	curl --header "Range: bytes=$off-$len" -s $url
+	curl -u logs:$password --header "Range: bytes=$off-$len" -s $url
 }
 
 
