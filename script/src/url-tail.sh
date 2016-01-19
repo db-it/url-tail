@@ -1,28 +1,73 @@
 #!/bin/bash
 
+function show_help() {
+	echo "Syntax: url-tail.sh [-b <starting tail offset in bytes>] [-u username] [-p password] <URL>"
+	exit 0
+}
+
+# A POSIX variable
+OPTIND=1 # Reset in case getopts has been used previously in the shell.
+
+curl_username=""
+curl_passwd=""
+tail_off=0
+
+while getopts "u:p:b:h" opt; do
+		case "$opt" in
+		h)
+			show_help
+			;;
+		u) curl_username=$OPTARG
+			;;
+		p) curl_passwd=$OPTARG
+			;;
+		b)
+			if [[ $tail_off == *[!0-9]* ]]; then
+				echo "Tail offset must be a positive number"
+				exit 1
+			else
+				tail_off=$OPTARG
+			fi
+			;;
+		esac
+done
+
+shift $((OPTIND-1))
+
+
 if [ $# -lt 1 ]; then
-	echo "Syntax: url-tail.sh <URL> [<starting tail offset in bytes>]"
-	exit 1
+	show_help
 fi
 
 url=$1
 
-tail_off=0
-if [ $# -eq 2 ]; then
-	case $2 in
-    	''|*[!0-9]*)
-			echo "Tail offset must be a positive number"
-			exit 1
-			;;
-	    *)
-			tail_off=$2
-			;;
-	esac
+if [ -n "$curl_username" ]; then
+	if [ -z "$curl_passwd" ]; then
+		read -s -p "Enter Password for user '$curl_username': " curl_passwd
+		echo ""
+	fi
 fi
+
+function check_authentication_required() {
+	url=$1
+	if [ -z "$curl_username" ]; then
+		ret=`curl -s -I -X HEAD $url | grep "WWW-Authenticate:"`
+	fi
+
+	if [ -z "$ret" ]; then
+		echo
+	else
+		return 1
+	fi
+}
 
 function check_ranges_support() {
 	url=$1
-	ret=`curl -s -I -X HEAD $url | grep "Accept-Ranges: bytes"`
+	if [ -n "$curl_username" ]; then
+		ret=`curl -u $curl_username:$curl_passwd -s -I -X HEAD $url | grep "Accept-Ranges: bytes"`
+	else
+		ret=`curl -s -I -X HEAD $url | grep "Accept-Ranges: bytes"`
+	fi
 
 	if [ -z "$ret" ]; then
 		echo
@@ -34,7 +79,11 @@ function check_ranges_support() {
 function get_length() {
 
 	url=$1
-	ret=`curl -s -I -X HEAD $url | awk '/Content-Length:/ {print $2}'`
+	if [ -n "$curl_username" ]; then
+		ret=`curl -u $curl_username:$curl_passwd -s -I -X HEAD $url | awk '/Content-Length:/ {print $2}'`
+	else
+		ret=`curl -s -I -X HEAD $url | awk '/Content-Length:/ {print $2}'`
+	fi
 	echo $ret | sed 's/[^0-9]*//g'
 }
 
@@ -43,10 +92,20 @@ function print_tail() {
 	url=$1
 	off=$2
 	len=$3
-
-	curl --header "Range: bytes=$off-$len" -s $url
+	if [ -n "$curl_username" ]; then
+		curl -u $curl_username:$curl_passwd --header "Range: bytes=$off-$len" -s $url
+	else
+		curl --header "Range: bytes=$off-$len" -s $url
+	fi
 }
 
+check_authentication_required $url
+authentication_required=$?
+
+if [ $authentication_required -eq 1 ]; then
+	echo "Authentication required by the server. Try with option -u and/or -p"
+	exit 1
+fi
 
 check_ranges_support $url
 ranges_support=$?

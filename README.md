@@ -28,4 +28,14 @@ sudo chmod +x /usr/bin/url-tail.sh
 
   If you want to start url-tail with some data displayed you can tell it how many bytes to fetch from the end of file
 
-`url-tail.sh http://example.com/file_to_tail 1000`
+`url-tail.sh -b 1000 http://example.com/file_to_tail`
+
+  If the Server requires Authentication you can provide username for Authentication. Script prompts for a password.
+
+`url-tail.sh -u username http://example.com/file_to_tail`
+
+  You can also provide the password through parameter -p.
+
+`url-tail.sh -u username -p secret_password http://example.com/file_to_tail`
+
+  The Script checks if Authentication is required if parameter -u is not provided and stops if the server requires Authentication.
