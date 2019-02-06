@@ -64,11 +64,12 @@ function check_authentication_required() {
 function check_ranges_support() {
 	url=$1
 	if [ -n "$curl_username" ]; then
-		ret=`curl -u $curl_username:$curl_passwd -s -I -X HEAD $url | grep "Accept-Ranges: bytes"`
+		ret=`curl -u $curl_username:$curl_passwd -s -I -X HEAD $url | grep -i "Accept-Ranges: bytes"`
 	else
-		ret=`curl -s -I -X HEAD $url | grep "Accept-Ranges: bytes"`
+		ret=`curl -s -I -X HEAD $url | grep -i "Accept-Ranges: bytes"`
 	fi
 
+	# echo "${ret}"
 	if [ -z "$ret" ]; then
 		echo
 	else
@@ -80,9 +81,9 @@ function get_length() {
 
 	url=$1
 	if [ -n "$curl_username" ]; then
-		ret=`curl -u $curl_username:$curl_passwd -s -I -X HEAD $url | awk '/Content-Length:/ {print $2}'`
+		ret=`curl -u $curl_username:$curl_passwd -s -I -X HEAD $url | awk '/(C|c)ontent-(L|l)ength:/ {print $2}'`
 	else
-		ret=`curl -s -I -X HEAD $url | awk '/Content-Length:/ {print $2}'`
+		ret=`curl -s -I -X HEAD $url | awk '/(C|c)ontent-(L|l)ength:/ {print $2}'`
 	fi
 	echo $ret | sed 's/[^0-9]*//g'
 }
